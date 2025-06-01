@@ -16,17 +16,17 @@
 					{
 						"indexed": true,
 						"internalType": "address",
-						"name": "bidder",
+						"name": "winnerBidder",
 						"type": "address"
 					},
 					{
 						"indexed": false,
 						"internalType": "uint256",
-						"name": "value",
+						"name": "winnerBid",
 						"type": "uint256"
 					}
 				],
-				"name": "end",
+				"name": "auctionFinnished",
 				"type": "event"
 			},
 			{
@@ -107,13 +107,62 @@
 			}
 		],
 		"devdoc": {
+			"author": "Fernando Malaspina",
+			"events": {
+				"auctionFinnished(address,uint256)": {
+					"params": {
+						"winnerBid": "Valor de la puja en wei",
+						"winnerBidder": "Dirección del usuario que ganó la subasta"
+					}
+				},
+				"newBid(address,uint256)": {
+					"params": {
+						"bidder": "Dirección del usuario que hizo la puja",
+						"value": "Valor de la puja en wei"
+					}
+				}
+			},
 			"kind": "dev",
-			"methods": {},
+			"methods": {
+				"bid()": {
+					"details": "Lanza error si no supera el 5% o si ya es el ofertante ganador"
+				},
+				"getAllBids()": {
+					"returns": {
+						"_0": "Una lista de structs con el address del postor y su puja"
+					}
+				},
+				"getWinnerBid()": {
+					"returns": {
+						"_0": "Struct Bid con address y valor ofertado"
+					}
+				}
+			},
+			"title": "Subasta pública",
 			"version": 1
 		},
 		"userdoc": {
+			"events": {
+				"auctionFinnished(address,uint256)": {
+					"notice": "Se emite cuando la subasta ha finalizado."
+				},
+				"newBid(address,uint256)": {
+					"notice": "Se emite cuando se realiza una nueva puja válida."
+				}
+			},
 			"kind": "user",
-			"methods": {},
+			"methods": {
+				"bid()": {
+					"notice": "Permite hacer una nueva puja si cumple las reglas de la subasta"
+				},
+				"getAllBids()": {
+					"notice": "Devuelve todas las pujas realizadas en formato estructurado"
+				},
+				"getWinnerBid()": {
+					"notice": "Devuelve el ganador de la subasta y su puja"
+				}
+			},
+			"notice": "Este contrato permite ofertar en subastas. Las reglas de la subasta son las siguientes: - No se admiten pujas inferiores a un 5% mayores a la ultima puja. - El precio base de la subasta es 1 ether. - La duración estipulada es de 1 hora. - El plazo de la subasta se extiende en 10 minutos con cada nueva oferta válida.  Esta regla aplica siempre a partir de 10 minutos antes del plazo original de la subasta.  De esta manera los competidores tienen suficiente tiempo para presentar una nueva oferta si así lo desean.",
 			"version": 1
 		}
 	},
@@ -134,11 +183,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0xcddcbeee8d7e74be4ba6cda1e080fbd462511d5e02546e209df8c6119c286ca5",
+			"keccak256": "0x69c03fceccd7cfded1ca92b3c655352f04dd446d8af03c5803ed8b0d365e2c6a",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://df67be569ed00cf3f17275abf3a834d0928e18cca6cce9d20a332505ab212948",
-				"dweb:/ipfs/QmU4QKXRjYmQ8fiouVNrEGAtn7dpCGKh2exdveaZiY7AES"
+				"bzz-raw://3073a5a2a392a3ea5befc267584741dc47b608d9df49d30a545b1b33dee450cb",
+				"dweb:/ipfs/QmU9GZDu4N2vwVF2RudDmhz9p2c1RKsRg669ETxzgkYYeW"
 			]
 		}
 	},
