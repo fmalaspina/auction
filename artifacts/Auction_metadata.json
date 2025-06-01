@@ -50,38 +50,31 @@
 			},
 			{
 				"inputs": [],
-				"name": "actualBid",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
 				"name": "bid",
-				"outputs": [
-					{
-						"internalType": "address",
-						"name": "",
-						"type": "address"
-					}
-				],
+				"outputs": [],
 				"stateMutability": "payable",
 				"type": "function"
 			},
 			{
 				"inputs": [],
-				"name": "duration",
+				"name": "getAllBids",
 				"outputs": [
 					{
-						"internalType": "uint256",
+						"components": [
+							{
+								"internalType": "address",
+								"name": "bidder",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amount",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct Auction.Bid[]",
 						"name": "",
-						"type": "uint256"
+						"type": "tuple[]"
 					}
 				],
 				"stateMutability": "view",
@@ -89,46 +82,28 @@
 			},
 			{
 				"inputs": [],
-				"name": "endDate",
+				"name": "getWinnerBid",
 				"outputs": [
 					{
-						"internalType": "uint256",
+						"components": [
+							{
+								"internalType": "address",
+								"name": "bidder",
+								"type": "address"
+							},
+							{
+								"internalType": "uint256",
+								"name": "amount",
+								"type": "uint256"
+							}
+						],
+						"internalType": "struct Auction.Bid",
 						"name": "",
-						"type": "uint256"
+						"type": "tuple"
 					}
 				],
 				"stateMutability": "view",
 				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "increment",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "startDate",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"stateMutability": "payable",
-				"type": "receive"
 			}
 		],
 		"devdoc": {
@@ -159,11 +134,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0x70195cc371f7d1041a6ea999a6f8e5cf84f24d127622603a30ffb60f9f8c3187",
+			"keccak256": "0xcddcbeee8d7e74be4ba6cda1e080fbd462511d5e02546e209df8c6119c286ca5",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://cbaa242943c71b79be2d5c9e459bccce7334046babb2249d00a45538f94cc7fe",
-				"dweb:/ipfs/QmaYyYYdPFFY3juQC7sh1Fu3KMpeZHpwEWdmXZ8JykQ2jT"
+				"bzz-raw://df67be569ed00cf3f17275abf3a834d0928e18cca6cce9d20a332505ab212948",
+				"dweb:/ipfs/QmU4QKXRjYmQ8fiouVNrEGAtn7dpCGKh2exdveaZiY7AES"
 			]
 		}
 	},
