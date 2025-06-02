@@ -1,0 +1,79 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [
+					{
+						"internalType": "address",
+						"name": "auctionAddr",
+						"type": "address"
+					}
+				],
+				"name": "placeBid",
+				"outputs": [],
+				"stateMutability": "payable",
+				"type": "function"
+			},
+			{
+				"stateMutability": "payable",
+				"type": "receive"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {},
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"Auction.t.sol": "Bidder"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"Auction.sol": {
+			"keccak256": "0xb6599b0ab2f540dc68b967ec4026feab3e8df1f6817238a40dd0efb2924922e6",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://3217ffbc2a9eac555c25991ad4f05803196d1a356e681fd9514013fc30b64768",
+				"dweb:/ipfs/Qmak5gvMutLijf36fLGvPeLj6j1PFz87JL2E5WFFPNRe9X"
+			]
+		},
+		"Auction.t.sol": {
+			"keccak256": "0xa123927dc200e989ece35e19e8b37b9c1c190eb7a58987d23d4f2614f3f1fb7c",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://551194cae8327e492c21818077de0cea85c0db77685209edeec342f89d95c86b",
+				"dweb:/ipfs/Qma4Wy9AyMEE5vvCrHi3BQBK6Zr69DehgqtAWP96gZgiJf"
+			]
+		},
+		"remix_tests.sol": {
+			"keccak256": "0xe2783cdc204cba8c72494119339f1d90f9022b15d6c718c668b7f097d8e29787",
+			"license": "GPL-3.0",
+			"urls": [
+				"bzz-raw://bb6a22e64c7f16bcaab63b1c1a1b269d5be8a6d37bdd9dec1718477ab916b18e",
+				"dweb:/ipfs/QmdkW1tT5iadBvaHMCoskhDGZKnfdg8o1D9CcoQYtdJet7"
+			]
+		}
+	},
+	"version": 1
+}

@@ -1,0 +1,18 @@
+/**
+ * Minified by jsDelivr using Terser v5.39.0.
+ * Original file: /npm/remix@2.16.8/dist/index.js
+ *
+ * Do NOT use SRI with dynamically generated files! More information: https://www.jsdelivr.com/using-sri-with-dynamic-files
+ */
+/**
+ * remix v2.16.8
+ *
+ * Copyright (c) Remix Software Inc.
+ *
+ * This source code is licensed under the MIT license found in the
+ * LICENSE.md file in the root directory of this source tree.
+ *
+ * @license MIT
+ */
+"use strict";Object.defineProperty(exports,"__esModule",{value:!0});class RemixPackageNotUsedError extends Error{constructor(){super("The `remix` package is no longer used for Remix modules and should be removed from your project dependencies. See https://github.com/remix-run/remix/releases/tag/remix%402.0.0 for more information.")}}throw new RemixPackageNotUsedError;
+//# sourceMappingURL=/sm/0610e3b20262fcce866d5cf7c1f4efdb34fa4539581b7af94504465544548413.map
