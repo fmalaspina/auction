@@ -51,7 +51,7 @@
 						"type": "uint256"
 					}
 				],
-				"name": "AuctionFinnished",
+				"name": "AuctionFinished",
 				"type": "event"
 			},
 			{
@@ -71,6 +71,25 @@
 					}
 				],
 				"name": "NewBid",
+				"type": "event"
+			},
+			{
+				"anonymous": false,
+				"inputs": [
+					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"indexed": false,
+						"internalType": "uint256",
+						"name": "refundAmount",
+						"type": "uint256"
+					}
+				],
+				"name": "PartialRefund",
 				"type": "event"
 			},
 			{
@@ -108,6 +127,78 @@
 			},
 			{
 				"inputs": [],
+				"name": "duration",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "endDate",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "extension",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "finalize",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "finalized",
+				"outputs": [
+					{
+						"internalType": "bool",
+						"name": "",
+						"type": "bool"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "gasFee",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
 				"name": "getAllBids",
 				"outputs": [
 					{
@@ -126,6 +217,19 @@
 						"internalType": "struct Auction.Bid[]",
 						"name": "",
 						"type": "tuple[]"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "getTimeLeft",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
 					}
 				],
 				"stateMutability": "view",
@@ -155,6 +259,45 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "increment",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "startDate",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -168,7 +311,7 @@
 						"newEndTime": "Nueva fecha de fin de subasta"
 					}
 				},
-				"AuctionFinnished(address,uint256)": {
+				"AuctionFinished(address,uint256)": {
 					"params": {
 						"winnerBid": "Valor de la puja en wei",
 						"winnerBidder": "Dirección del usuario que ganó la subasta"
@@ -178,6 +321,12 @@
 					"params": {
 						"bidder": "Dirección del usuario que hizo la puja",
 						"value": "Valor de la puja en wei"
+					}
+				},
+				"PartialRefund(address,uint256)": {
+					"params": {
+						"bidder": "Dirección del ofertante",
+						"refundAmount": "Valor por sobre la puja menos 2% de gas"
 					}
 				},
 				"Refund(address,uint256)": {
@@ -192,9 +341,17 @@
 				"bid()": {
 					"details": "Lanza error si no supera el 5% o si ya es el ofertante ganador"
 				},
+				"finalize()": {
+					"details": "Deberia tener modifier onlyOwner, pero se deja sin para que los profes puedan probar la finalizacion"
+				},
 				"getAllBids()": {
 					"returns": {
-						"_0": "Una lista de structs con el address del postor y su puja"
+						"_0": "Bid[] Una lista de structs con el address del postor y su puja"
+					}
+				},
+				"getTimeLeft()": {
+					"returns": {
+						"_0": "uint256 timeLeft"
 					}
 				},
 				"getWinnerBid()": {
@@ -211,11 +368,14 @@
 				"AuctionExtended(address,uint256,uint256)": {
 					"notice": "Finalización de la subasta extendida."
 				},
-				"AuctionFinnished(address,uint256)": {
+				"AuctionFinished(address,uint256)": {
 					"notice": "Se emite cuando la subasta ha finalizado."
 				},
 				"NewBid(address,uint256)": {
 					"notice": "Se emite cuando se realiza una nueva puja válida."
+				},
+				"PartialRefund(address,uint256)": {
+					"notice": "Reclamos parcial automático (mejora a la propuesta en la consigna)"
 				},
 				"Refund(address,uint256)": {
 					"notice": "Reclamo de fondos"
@@ -232,8 +392,11 @@
 				"getAllBids()": {
 					"notice": "Devuelve todas las pujas realizadas en formato estructurado"
 				},
+				"getTimeLeft()": {
+					"notice": "Devuelve el tiempo hasta finalizar la subasta"
+				},
 				"getWinnerBid()": {
-					"notice": "Devuelve el ganador de la subasta y su puja"
+					"notice": "Devuelve la oferta ganador de la subasta y su puja hasta el momento"
 				}
 			},
 			"notice": "Este contrato permite ofertar en subastas.",
@@ -257,11 +420,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0xb6599b0ab2f540dc68b967ec4026feab3e8df1f6817238a40dd0efb2924922e6",
+			"keccak256": "0x913161b3ed38d7c480bba3ee14899a30b8986408fa9c7c86bcc368834ac06d99",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://3217ffbc2a9eac555c25991ad4f05803196d1a356e681fd9514013fc30b64768",
-				"dweb:/ipfs/Qmak5gvMutLijf36fLGvPeLj6j1PFz87JL2E5WFFPNRe9X"
+				"bzz-raw://63a03b9b5effa2b5a61c51f73f5ab20fb606697c19d3e5f5f72c8a877273363b",
+				"dweb:/ipfs/QmaDgciCTZmRodPj49xHmqqF2x6j4frwjNfVUj8jRkdhBP"
 			]
 		}
 	},
