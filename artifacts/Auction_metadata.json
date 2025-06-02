@@ -298,6 +298,13 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "withdrawRemaining",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
 			}
 		],
 		"devdoc": {
@@ -420,11 +427,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0x913161b3ed38d7c480bba3ee14899a30b8986408fa9c7c86bcc368834ac06d99",
+			"keccak256": "0x505ae71c38e7764b07a4e7f1ff36d24cea6e593cc5ce80f074d0bffba6e0e3ee",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://63a03b9b5effa2b5a61c51f73f5ab20fb606697c19d3e5f5f72c8a877273363b",
-				"dweb:/ipfs/QmaDgciCTZmRodPj49xHmqqF2x6j4frwjNfVUj8jRkdhBP"
+				"bzz-raw://758487f0c8663cf156a0fa274359b07b4f2845fc3ec52af2edd685693720a229",
+				"dweb:/ipfs/QmTnWSNNMYWAhHwQK1TqBG6UJYxKyqiZ7SjkUPi4eJ8c7M"
 			]
 		}
 	},

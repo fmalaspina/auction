@@ -75,6 +75,11 @@ contract Auction {
         _;
     }
 
+    modifier onlyFinalized {
+        require(finalized, "Not finalized yet." );
+        _;
+    }
+
     modifier nonReentrant { 
         require(!locked, "reentr."); 
         locked = true; 
@@ -84,6 +89,11 @@ contract Auction {
 
     modifier onlyStillActive() {
         require(block.timestamp < endDate, "Contrato expirado");
+        _;
+    }
+
+    modifier onlyOwner() {
+        require(msg.sender == owner, "Solo el owner puede finalizar la subasta.");
         _;
     }
 
@@ -164,7 +174,7 @@ contract Auction {
     }
 
     /// @dev Deberia tener modifier onlyOwner, pero se deja sin para que los profes puedan probar la finalizacion
-    function finalize() external onlyFinished onlyNotFinalized nonReentrant {
+    function finalize() external onlyOwner onlyFinished onlyNotFinalized nonReentrant {
         finalized = true;
         emit AuctionFinished(winnerBidder, winnerBid);   // <- aquí
     }
@@ -187,5 +197,11 @@ contract Auction {
         emit Refund(msg.sender,refundAmount);  
     }
 
+    function withdrawRemaining() external onlyOwner onlyFinalized {
+        uint256 balance = address(this).balance;
+        require(balance > 0, "No hay fondos remanentes para retirar");
 
+        (bool sent, ) = payable(owner).call{value: balance}("");
+        require(sent, "Transferencia fallida");
+    }
 }
