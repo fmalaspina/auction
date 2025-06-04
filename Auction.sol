@@ -255,6 +255,14 @@ contract Auction {
         emit PartialWithdraw(msg.sender, pendingWithraw);
     }
 
+
+    /**
+     * @notice Allows the claiming of the dev fees from the balance of the contract
+     */
+    function claimDevFees() external onlyOwner nonReentrant {
+        (bool success, ) = payable(owner).call{value: address(this).balance}("");
+        require(success, "Claim failed");
+    }
     /**
      * @notice Allows the owner to refund all bidders at the end of the auction.
      *         The winner receives only their pendingWithdraw amount - 2%.
@@ -271,9 +279,10 @@ contract Auction {
             if (bidderAddr != winnerBid.bidder) {
                 uint256 bidNet = (record.bid.amount * (100 - gasFee)) / 100;
                 refundAmount = pendingWithrawNet + bidNet;
+                record.bid.amount = 0;
             }
             record.pendingWithdraw = 0;
-            record.bid.amount = 0;
+            
             
             if (refundAmount > 0) {
                 (bool success, ) = payable(bidderAddr).call{value: refundAmount}("");
