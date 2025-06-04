@@ -14,21 +14,21 @@
 				"anonymous": false,
 				"inputs": [
 					{
-						"indexed": true,
-						"internalType": "address",
-						"name": "bidder",
-						"type": "address"
-					},
-					{
 						"indexed": false,
 						"internalType": "uint256",
 						"name": "newEndTime",
 						"type": "uint256"
 					},
 					{
+						"indexed": true,
+						"internalType": "address",
+						"name": "lastBidder",
+						"type": "address"
+					},
+					{
 						"indexed": false,
 						"internalType": "uint256",
-						"name": "bidAmount",
+						"name": "lastBidAmount",
 						"type": "uint256"
 					}
 				],
@@ -66,7 +66,7 @@
 					{
 						"indexed": false,
 						"internalType": "uint256",
-						"name": "value",
+						"name": "amount",
 						"type": "uint256"
 					}
 				],
@@ -85,11 +85,11 @@
 					{
 						"indexed": false,
 						"internalType": "uint256",
-						"name": "refundAmount",
+						"name": "withdrawnAmount",
 						"type": "uint256"
 					}
 				],
-				"name": "PartialRefund",
+				"name": "PartialWithdraw",
 				"type": "event"
 			},
 			{
@@ -104,7 +104,7 @@
 					{
 						"indexed": false,
 						"internalType": "uint256",
-						"name": "claimedAmount",
+						"name": "refundAmount",
 						"type": "uint256"
 					}
 				],
@@ -113,16 +113,22 @@
 			},
 			{
 				"inputs": [],
-				"name": "bid",
-				"outputs": [],
-				"stateMutability": "payable",
+				"name": "allowedIncrement",
+				"outputs": [
+					{
+						"internalType": "uint256",
+						"name": "",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
 				"type": "function"
 			},
 			{
 				"inputs": [],
-				"name": "claim",
+				"name": "bid",
 				"outputs": [],
-				"stateMutability": "nonpayable",
+				"stateMutability": "payable",
 				"type": "function"
 			},
 			{
@@ -140,7 +146,7 @@
 			},
 			{
 				"inputs": [],
-				"name": "endDate",
+				"name": "endTime",
 				"outputs": [
 					{
 						"internalType": "uint256",
@@ -166,26 +172,6 @@
 			},
 			{
 				"inputs": [],
-				"name": "finalize",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "finalized",
-				"outputs": [
-					{
-						"internalType": "bool",
-						"name": "",
-						"type": "bool"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
 				"name": "gasFee",
 				"outputs": [
 					{
@@ -199,22 +185,34 @@
 			},
 			{
 				"inputs": [],
-				"name": "getAllBids",
+				"name": "getBids",
 				"outputs": [
 					{
 						"components": [
 							{
-								"internalType": "address",
-								"name": "bidder",
-								"type": "address"
+								"components": [
+									{
+										"internalType": "address",
+										"name": "bidder",
+										"type": "address"
+									},
+									{
+										"internalType": "uint256",
+										"name": "amount",
+										"type": "uint256"
+									}
+								],
+								"internalType": "struct Auction.Bid",
+								"name": "bid",
+								"type": "tuple"
 							},
 							{
 								"internalType": "uint256",
-								"name": "amount",
+								"name": "pendingWithdraw",
 								"type": "uint256"
 							}
 						],
-						"internalType": "struct Auction.Bid[]",
+						"internalType": "struct Auction.BidRecord[]",
 						"name": "",
 						"type": "tuple[]"
 					}
@@ -262,19 +260,6 @@
 			},
 			{
 				"inputs": [],
-				"name": "increment",
-				"outputs": [
-					{
-						"internalType": "uint256",
-						"name": "",
-						"type": "uint256"
-					}
-				],
-				"stateMutability": "view",
-				"type": "function"
-			},
-			{
-				"inputs": [],
 				"name": "owner",
 				"outputs": [
 					{
@@ -288,7 +273,21 @@
 			},
 			{
 				"inputs": [],
-				"name": "startDate",
+				"name": "partialWithraw",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "refundAll",
+				"outputs": [],
+				"stateMutability": "nonpayable",
+				"type": "function"
+			},
+			{
+				"inputs": [],
+				"name": "startTime",
 				"outputs": [
 					{
 						"internalType": "uint256",
@@ -298,115 +297,129 @@
 				],
 				"stateMutability": "view",
 				"type": "function"
-			},
-			{
-				"inputs": [],
-				"name": "withdrawRemaining",
-				"outputs": [],
-				"stateMutability": "nonpayable",
-				"type": "function"
 			}
 		],
 		"devdoc": {
 			"author": "Fernando Malaspina",
-			"details": "Las reglas de la subasta son las siguientes: - No se admiten pujas inferiores a un 5% mayores a la ultima puja. - El precio base de la subasta es 1 ether. - La duración estipulada es de 1 hora. - El plazo de la subasta se extiende en 10 minutos con cada nueva oferta válida.  Esta regla aplica siempre a partir de 10 minutos antes del plazo original de la subasta.  De esta manera los competidores tienen suficiente tiempo para presentar una nueva oferta si así lo desean.",
+			"details": "Auction rules: - Bids must be at least 5% higher than the current highest bid. - The base price for the auction is 1 ether. - Auction duration is initially set to 1 hour. - The auction is extended by 10 minutes with every valid new bid made in the last 10 minutes.   This allows other bidders enough time to respond.",
 			"events": {
-				"AuctionExtended(address,uint256,uint256)": {
+				"AuctionExtended(uint256,address,uint256)": {
 					"params": {
-						"bidAmount": "Valor de la puja",
-						"bidder": "Dirección del ofertante",
-						"newEndTime": "Nueva fecha de fin de subasta"
+						"lastBidAmount": "Amount of the triggering bid.",
+						"lastBidder": "Address of the bidder who triggered the extension.",
+						"newEndTime": "Updated auction end time."
 					}
 				},
 				"AuctionFinished(address,uint256)": {
 					"params": {
-						"winnerBid": "Valor de la puja en wei",
-						"winnerBidder": "Dirección del usuario que ganó la subasta"
+						"winnerBid": "Value of the winning bid in wei.",
+						"winnerBidder": "Address of the auction winner."
 					}
 				},
 				"NewBid(address,uint256)": {
 					"params": {
-						"bidder": "Dirección del usuario que hizo la puja",
-						"value": "Valor de la puja en wei"
+						"amount": "Amount of the bid in wei.",
+						"bidder": "Address of the wallet that placed the bid."
 					}
 				},
-				"PartialRefund(address,uint256)": {
+				"PartialWithdraw(address,uint256)": {
 					"params": {
-						"bidder": "Dirección del ofertante",
-						"refundAmount": "Valor por sobre la puja menos 2% de gas"
+						"bidder": "Address of the bidder.",
+						"withdrawnAmount": "Amount withdrawn in wei."
 					}
 				},
 				"Refund(address,uint256)": {
 					"params": {
-						"bidder": "Dirección del ofertante",
-						"claimedAmount": "Valor de la puja menos 2% de gas"
+						"bidder": "Address of the bidder.",
+						"refundAmount": "Amount refunded in wei."
 					}
 				}
 			},
 			"kind": "dev",
 			"methods": {
 				"bid()": {
-					"details": "Lanza error si no supera el 5% o si ya es el ofertante ganador"
+					"details": "Reverts if bid is not at least 5% higher or if sender is current highest bidder."
 				},
-				"finalize()": {
-					"details": "Deberia tener modifier onlyOwner, pero se deja sin para que los profes puedan probar la finalizacion"
-				},
-				"getAllBids()": {
+				"getBids()": {
 					"returns": {
-						"_0": "Bid[] Una lista de structs con el address del postor y su puja"
+						"_0": "A list of BidRecord structs containing each bidder's data."
 					}
 				},
 				"getTimeLeft()": {
 					"returns": {
-						"_0": "uint256 timeLeft"
+						"_0": "Time left in seconds."
 					}
 				},
 				"getWinnerBid()": {
 					"returns": {
-						"_0": "Struct Bid con address y valor ofertado"
+						"_0": "Struct Bid containing the highest bidder and bid amount."
 					}
 				}
 			},
-			"title": "Subasta pública",
+			"title": "Public auction for generic assets",
 			"version": 1
 		},
 		"userdoc": {
 			"events": {
-				"AuctionExtended(address,uint256,uint256)": {
-					"notice": "Finalización de la subasta extendida."
+				"AuctionExtended(uint256,address,uint256)": {
+					"notice": "Emitted when the auction is extended due to a new bid."
 				},
 				"AuctionFinished(address,uint256)": {
-					"notice": "Se emite cuando la subasta ha finalizado."
+					"notice": "Emitted when the auction ends via the owner's refund action."
 				},
 				"NewBid(address,uint256)": {
-					"notice": "Se emite cuando se realiza una nueva puja válida."
+					"notice": "Emitted when a new valid bid is placed."
 				},
-				"PartialRefund(address,uint256)": {
-					"notice": "Reclamos parcial automático (mejora a la propuesta en la consigna)"
+				"PartialWithdraw(address,uint256)": {
+					"notice": "Emitted when a bidder performs a partial withdrawal during the auction."
 				},
 				"Refund(address,uint256)": {
-					"notice": "Reclamo de fondos"
+					"notice": "Emitted when a bidder receives a refund."
 				}
 			},
 			"kind": "user",
 			"methods": {
+				"allowedIncrement()": {
+					"notice": "Required percentage increment (e.g., 5%) for a bid to be accepted."
+				},
 				"bid()": {
-					"notice": "Permite hacer una nueva puja si cumple las reglas de la subasta"
+					"notice": "Places a new bid if it complies with the rules."
 				},
-				"claim()": {
-					"notice": "Reclama el dinero ofertado menos 2% de gas"
+				"duration()": {
+					"notice": "Total duration of the auction."
 				},
-				"getAllBids()": {
-					"notice": "Devuelve todas las pujas realizadas en formato estructurado"
+				"endTime()": {
+					"notice": "End time of the auction. Can be extended during the auction."
+				},
+				"extension()": {
+					"notice": "Time extension applied if a bid is placed within the last 10 minutes."
+				},
+				"gasFee()": {
+					"notice": "Fee percentage (e.g., 2%) deducted from bid refunds for gas compensation."
+				},
+				"getBids()": {
+					"notice": "Returns all bids in structured format."
 				},
 				"getTimeLeft()": {
-					"notice": "Devuelve el tiempo hasta finalizar la subasta"
+					"notice": "Returns the remaining time before the auction ends."
 				},
 				"getWinnerBid()": {
-					"notice": "Devuelve la oferta ganador de la subasta y su puja hasta el momento"
+					"notice": "Returns the current highest bid and bidder."
+				},
+				"owner()": {
+					"notice": "Owner of the contract."
+				},
+				"partialWithraw()": {
+					"notice": "Allows bidders to partially withdraw previous bids (not the latest one).         No gas fee is deducted. Can only be done during the auction."
+				},
+				"refundAll()": {
+					"notice": "Allows the owner to refund all bidders at the end of the auction.         The winner receives only their pendingWithdraw amount - 2%.         Others receive their pendingWithdraw + (bid - 2% fee)."
+				},
+				"startTime()": {
+					"notice": "Start time of the auction."
 				}
 			},
-			"notice": "Este contrato permite ofertar en subastas.",
+			"notice": "This contract allows users to participate in an auction.",
 			"version": 1
 		}
 	},
@@ -427,11 +440,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0x505ae71c38e7764b07a4e7f1ff36d24cea6e593cc5ce80f074d0bffba6e0e3ee",
+			"keccak256": "0xd52436af323d44b62982bd5812a4dcde6f9017c12f3a68ec0a616689c544a10a",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://758487f0c8663cf156a0fa274359b07b4f2845fc3ec52af2edd685693720a229",
-				"dweb:/ipfs/QmTnWSNNMYWAhHwQK1TqBG6UJYxKyqiZ7SjkUPi4eJ8c7M"
+				"bzz-raw://58a51f2811c955ba10ab34ba80772860d069e29bcbe5f8d7dd5ca9321d14a4a4",
+				"dweb:/ipfs/QmRomcnfYvro43PReJyN3TpeoBHZtx22Lm6w8aQKMKMkPL"
 			]
 		}
 	},

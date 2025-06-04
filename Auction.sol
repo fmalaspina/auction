@@ -1,207 +1,287 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/// @title Subasta pública
-/// @author Fernando Malaspina
-/// @notice Este contrato permite ofertar en subastas.
-/// @dev Las reglas de la subasta son las siguientes:
-/// - No se admiten pujas inferiores a un 5% mayores a la ultima puja.
-/// - El precio base de la subasta es 1 ether.
-/// - La duración estipulada es de 1 hora.
-/// - El plazo de la subasta se extiende en 10 minutos con cada nueva oferta válida. 
-/// Esta regla aplica siempre a partir de 10 minutos antes del plazo original de la subasta. 
-/// De esta manera los competidores tienen suficiente tiempo para presentar una nueva oferta si así lo desean.
+/**
+ * @title Public auction for generic assets
+ * @author Fernando Malaspina
+ * @notice This contract allows users to participate in an auction.
+ * @dev Auction rules:
+ * - Bids must be at least 5% higher than the current highest bid.
+ * - The base price for the auction is 1 ether.
+ * - Auction duration is initially set to 1 hour.
+ * - The auction is extended by 10 minutes with every valid new bid made in the last 10 minutes.
+ *   This allows other bidders enough time to respond.
+ */
 contract Auction {
+    /**
+     * @notice Owner of the contract.
+     */
     address public immutable owner;
-    uint256 public immutable startDate;
-    uint256 public endDate;
+
+    /**
+     * @notice Start time of the auction.
+     */
+    uint256 public immutable startTime;
+
+    /**
+     * @notice End time of the auction. Can be extended during the auction.
+     */
+    uint256 public endTime;
+
+    /**
+     * @notice Total duration of the auction.
+     */
     uint256 public immutable duration;
-    address private winnerBidder;
-    uint256 private winnerBid;
-    uint256 public immutable increment;
-    uint256 public immutable extension;
-    uint256 public immutable gasFee;
+
+    /**
+     * @notice Structure representing a bid: bidder address and bid amount.
+     */
     struct Bid {
         address bidder;
         uint256 amount;
     }
-    mapping(address => uint256) private bids;
-    bool public finalized;
+
+    /**
+     * @notice Current highest (winning) bid.
+     */
+    Bid winnerBid;
+
+    /**
+     * @notice Base price (e.g., 0.95 ether). A new bid must exceed this + allowed increment.
+     */
+    uint256 private basePrice;
+
+    /**
+     * @notice Required percentage increment (e.g., 5%) for a bid to be accepted.
+     */
+    uint256 public immutable allowedIncrement;
+
+    /**
+     * @notice Time extension applied if a bid is placed within the last 10 minutes.
+     */
+    uint256 public immutable extension;
+
+    /**
+     * @notice Fee percentage (e.g., 2%) deducted from bid refunds for gas compensation.
+     */
+    uint256 public immutable gasFee;
+
+    /**
+     * @notice Structure holding bid info and any pending amount available for withdrawal.
+     */
+    struct BidRecord {
+        Bid bid;
+        uint256 pendingWithdraw;
+    }
+
+    /**
+     * @notice Maps each bidder's address to their bid record.
+     */
+    mapping(address => BidRecord) private bids;
+
+    /**
+     * @notice Helper array used to iterate over bidders for refund processing.
+     */
     address[] private bidders;
 
+    /**
+     * @notice Lock used to prevent reentrancy during critical operations.
+     */
+    bool locked;
 
-    bool locked; 
-    
     constructor() {
         owner = msg.sender;
-        startDate = block.timestamp;
+        startTime = block.timestamp;
         duration = 15 minutes;
-        endDate = startDate + duration;
-        winnerBid = 0.95 ether;
-        increment = 5;
-        finalized = false;
+        endTime = startTime + duration;
+        basePrice = 0.95 ether;
+        allowedIncrement = 5;
         extension = 10 minutes;
         gasFee = 2;
     }
-    
-    /// @notice Se emite cuando se realiza una nueva puja válida.
-    /// @param bidder Dirección del usuario que hizo la puja
-    /// @param value  Valor de la puja en wei
-    event NewBid(address indexed bidder, uint256 value);
-    
-    /// @notice Se emite cuando la subasta ha finalizado.
-    /// @param winnerBidder Dirección del usuario que ganó la subasta
-    /// @param winnerBid  Valor de la puja en wei
+
+    // =====================
+    // ======= Events ======
+    // =====================
+
+    /**
+     * @notice Emitted when a new valid bid is placed.
+     * @param bidder Address of the wallet that placed the bid.
+     * @param amount Amount of the bid in wei.
+     */
+    event NewBid(address indexed bidder, uint256 amount);
+
+    /**
+     * @notice Emitted when the auction ends via the owner's refund action.
+     * @param winnerBidder Address of the auction winner.
+     * @param winnerBid Value of the winning bid in wei.
+     */
     event AuctionFinished(address indexed winnerBidder, uint256 winnerBid);
 
-    /// @notice Finalización de la subasta extendida.
-    /// @param bidder Dirección del ofertante
-    /// @param newEndTime Nueva fecha de fin de subasta
-    /// @param bidAmount Valor de la puja
-    event AuctionExtended(address indexed bidder, uint256 newEndTime, uint256 bidAmount);
+    /**
+     * @notice Emitted when the auction is extended due to a new bid.
+     * @param newEndTime Updated auction end time.
+     * @param lastBidder Address of the bidder who triggered the extension.
+     * @param lastBidAmount Amount of the triggering bid.
+     */
+    event AuctionExtended(uint256 newEndTime, address indexed lastBidder, uint256 lastBidAmount);
 
-    /// @notice Reclamo de fondos
-    /// @param bidder Dirección del ofertante
-    /// @param claimedAmount Valor de la puja menos 2% de gas
-    event Refund(address indexed bidder, uint256 claimedAmount);
+    /**
+     * @notice Emitted when a bidder receives a refund.
+     * @param bidder Address of the bidder.
+     * @param refundAmount Amount refunded in wei.
+     */
+    event Refund(address indexed bidder, uint256 refundAmount);
 
-    /// @notice Reclamos parcial automático (mejora a la propuesta en la consigna)
-    /// @param bidder Dirección del ofertante
-    /// @param refundAmount Valor por sobre la puja menos 2% de gas
-    event PartialRefund(address indexed bidder, uint256 refundAmount);
+    /**
+     * @notice Emitted when a bidder performs a partial withdrawal during the auction.
+     * @param bidder Address of the bidder.
+     * @param withdrawnAmount Amount withdrawn in wei.
+     */
+    event PartialWithdraw(address indexed bidder, uint256 withdrawnAmount);
 
-    modifier onlyNotFinalized {
-        require(!finalized, "Already finalized" );
+    // ======================
+    // ====== Modifiers =====
+    // ======================
+
+    modifier nonReentrant() {
+        require(!locked, "Reentrancy detected");
+        locked = true;
         _;
+        locked = false;
     }
 
-    modifier onlyFinalized {
-        require(finalized, "Not finalized yet." );
-        _;
-    }
-
-    modifier nonReentrant { 
-        require(!locked, "reentr."); 
-        locked = true; 
-        _; 
-        locked = false; 
-    }
-
-    modifier onlyStillActive() {
-        require(block.timestamp < endDate, "Contrato expirado");
+    modifier isActive() {
+        require(block.timestamp < endTime, "Auction has expired");
         _;
     }
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Solo el owner puede finalizar la subasta.");
-        _;
-    }
-
-
-    modifier onlyFinished() {
-        require(block.timestamp >= endDate, "El contrato aun no ha expirado");
+        require(msg.sender == owner, "Only owner can perform this action");
         _;
     }
 
     modifier onlyOtherThanWinnerBidder() {
-        require(msg.sender != winnerBidder, "Usted ya tiene la mejor puja");
+        require(msg.sender != winnerBid.bidder, "You already have the highest bid");
         _;
     }
 
     modifier onlyGreaterBid() {
-        require(msg.value > (winnerBid * (increment+100)) / 100, "Puja con menos de 5% de incremento sobre la ganadora");
+        require(
+            msg.value > (winnerBid.amount * (allowedIncrement + 100)) / 100,
+            "Bid must be at least 5% greater than current highest bid"
+        );
         _;
     }
 
-    /// @notice Permite hacer una nueva puja si cumple las reglas de la subasta
-    /// @dev Lanza error si no supera el 5% o si ya es el ofertante ganador
-    function bid() nonReentrant onlyStillActive onlyGreaterBid onlyOtherThanWinnerBidder external payable  {
-        emit NewBid(msg.sender, msg.value);
-        winnerBidder = msg.sender;
-        winnerBid = msg.value;
-        if (bids[msg.sender] == 0) {
-            bidders.push(msg.sender); // solo agregamos si es la primera vez
-        }
-        uint256 previousAmount = bids[msg.sender];
-        uint256 refundAmount = (previousAmount * (100 - gasFee)) / 100;
-        bids[msg.sender] = msg.value;
-        if (block.timestamp >= endDate - extension) {
-            uint256 newEndTime = endDate + extension;
-            endDate = newEndTime;
-            emit AuctionExtended(msg.sender,newEndTime,msg.value);
-        }
-        (bool sent, ) = payable(msg.sender).call{value: refundAmount}("");
-        require(sent, "Refund fallido");
-        emit PartialRefund(msg.sender, refundAmount);
+    // ===========================
+    // ===== Auction Functions ===
+    // ===========================
 
+    /**
+     * @notice Places a new bid if it complies with the rules.
+     * @dev Reverts if bid is not at least 5% higher or if sender is current highest bidder.
+     */
+    function bid() external payable nonReentrant isActive onlyGreaterBid onlyOtherThanWinnerBidder {
+        emit NewBid(msg.sender, msg.value);
+
+        winnerBid.bidder = msg.sender;
+        winnerBid.amount = msg.value;
+
+        BidRecord memory _bidRecord = bids[msg.sender];
+
+        if (_bidRecord.bid.amount == 0) {
+            _bidRecord = BidRecord(Bid(msg.sender, msg.value), 0);
+            bidders.push(_bidRecord.bid.bidder);
+        } else {
+            _bidRecord.pendingWithdraw += _bidRecord.bid.amount;
+            _bidRecord.bid.amount = msg.value;
+        }
+
+        bids[msg.sender] = _bidRecord;
+
+        if (block.timestamp > endTime - extension) {
+            endTime = block.timestamp + extension;
+            emit AuctionExtended(endTime, msg.sender, msg.value);
+        }
     }
-    
-    
-    /// @notice Devuelve todas las pujas realizadas en formato estructurado
-    /// @return Bid[] Una lista de structs con el address del postor y su puja
-    function getAllBids() external view returns (Bid[] memory) {
+
+    /**
+     * @notice Returns all bids in structured format.
+     * @return A list of BidRecord structs containing each bidder's data.
+     */
+    function getBids() external view returns (BidRecord[] memory) {
         uint256 len = bidders.length;
-        Bid[] memory all = new Bid[](len);
+        BidRecord[] memory _all = new BidRecord[](len);
 
         for (uint256 i = 0; i < len; i++) {
-            all[i] = Bid({
-                bidder: bidders[i],
-                amount: bids[bidders[i]]
-            });
+            _all[i] = bids[bidders[i]];
         }
+        return _all;
+    }
 
-        return all;
-    
-   
-    } 
-
-    /// @notice Devuelve el tiempo hasta finalizar la subasta
-    /// @return uint256 timeLeft
+    /**
+     * @notice Returns the remaining time before the auction ends.
+     * @return Time left in seconds.
+     */
     function getTimeLeft() external view returns (uint256) {
-        
-        if (block.timestamp >= endDate) {
+        if (block.timestamp >= endTime) {
             return 0;
         }
-        return  endDate - block.timestamp;
-        
+        return endTime - block.timestamp;
     }
 
-    /// @notice Devuelve la oferta ganador de la subasta y su puja hasta el momento
-    /// @return Struct Bid con address y valor ofertado
+    /**
+     * @notice Returns the current highest bid and bidder.
+     * @return Struct Bid containing the highest bidder and bid amount.
+     */
     function getWinnerBid() external view returns (Bid memory) {
-        return Bid({bidder: winnerBidder, amount: winnerBid});
-       
+        return winnerBid;
     }
 
-    /// @dev Deberia tener modifier onlyOwner, pero se deja sin para que los profes puedan probar la finalizacion
-    function finalize() external onlyOwner onlyFinished onlyNotFinalized nonReentrant {
-        finalized = true;
-        emit AuctionFinished(winnerBidder, winnerBid);   // <- aquí
+    /**
+     * @notice Allows bidders to partially withdraw previous bids (not the latest one).
+     *         No gas fee is deducted. Can only be done during the auction.
+     */
+    function partialWithraw() external isActive {
+        uint256 pendingWithraw = bids[msg.sender].pendingWithdraw;
+        require(pendingWithraw > 0, "No pending withdraw found");
+
+        bids[msg.sender].pendingWithdraw = 0;
+
+        (bool success, ) = payable(msg.sender).call{value: pendingWithraw}("");
+        require(success, "Refund failed");
+
+        emit PartialWithdraw(msg.sender, pendingWithraw);
     }
 
-    /// @notice Reclama el dinero ofertado menos 2% de gas
-    function claim() external nonReentrant onlyFinished onlyOtherThanWinnerBidder {        
-        uint256 bidAmount = bids[msg.sender];
-        require(bidAmount > 0, "No hay oferta realizada");
-        uint256 refundAmount = (bidAmount * (100 - gasFee)) / 100;
-        delete bids[msg.sender];
-        for (uint i = 0; i < bidders.length; i++) {
-            if (bidders[i] == msg.sender) {
-                bidders[i] = bidders[bidders.length - 1]; // move last to current
-                bidders.pop(); // remove last
-                break;
+    /**
+     * @notice Allows the owner to refund all bidders at the end of the auction.
+     *         The winner receives only their pendingWithdraw amount - 2%.
+     *         Others receive their pendingWithdraw + (bid - 2% fee).
+     */
+    function refundAll() external onlyOwner nonReentrant {
+        for (uint256 i = 0; i < bidders.length; i++) {
+            address bidderAddr = bidders[i];
+            BidRecord storage record = bids[bidderAddr];
+
+            uint256 refundAmount;
+
+            uint256 pendingWithrawNet = (record.pendingWithdraw * (100 - gasFee)) / 100;
+            if (bidderAddr != winnerBid.bidder) {
+                uint256 bidNet = (record.bid.amount * (100 - gasFee)) / 100;
+                refundAmount = pendingWithrawNet + bidNet;
+            }
+            record.pendingWithdraw = 0;
+            record.bid.amount = 0;
+            
+            if (refundAmount > 0) {
+                (bool success, ) = payable(bidderAddr).call{value: refundAmount}("");
+                require(success, "Refund failed");
+                emit Refund(bidderAddr, refundAmount);
             }
         }
-        (bool sent, ) = payable(msg.sender).call{value: refundAmount}("");
-        require(sent, "Refund fallido");
-        emit Refund(msg.sender,refundAmount);  
-    }
 
-    function withdrawRemaining() external onlyOwner onlyFinalized {
-        uint256 balance = address(this).balance;
-        require(balance > 0, "No hay fondos remanentes para retirar");
-
-        (bool sent, ) = payable(owner).call{value: balance}("");
-        require(sent, "Transferencia fallida");
+        emit AuctionFinished(winnerBid.bidder, winnerBid.amount);
     }
 }
