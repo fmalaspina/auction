@@ -1,4 +1,4 @@
-# 🛒 Auction Smart Contract
+# Auction Smart Contract
 
 A secure and gas-efficient public auction contract for Ethereum-based assets.
 
