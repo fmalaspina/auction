@@ -1,0 +1,64 @@
+{
+	"compiler": {
+		"version": "0.8.30+commit.73712a01"
+	},
+	"language": "Solidity",
+	"output": {
+		"abi": [
+			{
+				"inputs": [],
+				"name": "owner",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "",
+						"type": "address"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			}
+		],
+		"devdoc": {
+			"kind": "dev",
+			"methods": {},
+			"version": 1
+		},
+		"userdoc": {
+			"kind": "user",
+			"methods": {
+				"owner()": {
+					"notice": "Owner of the contract."
+				}
+			},
+			"notice": "Base contract with utilities to be inherited",
+			"version": 1
+		}
+	},
+	"settings": {
+		"compilationTarget": {
+			"BaseContract.sol": "BaseContract"
+		},
+		"evmVersion": "prague",
+		"libraries": {},
+		"metadata": {
+			"bytecodeHash": "ipfs"
+		},
+		"optimizer": {
+			"enabled": false,
+			"runs": 200
+		},
+		"remappings": []
+	},
+	"sources": {
+		"BaseContract.sol": {
+			"keccak256": "0x0bfca119b04b489d45d11037482966b04b2b7b2421b4e4ac84131808a8ce0d2b",
+			"license": "MIT",
+			"urls": [
+				"bzz-raw://a5037dc04c971b652063a9e5a96832c825751fad441b065a810aa38750ea7f5f",
+				"dweb:/ipfs/QmS4BqmnQ71djEAuEzDquMVwDe1qz7qbQhoJawnNgfxa7R"
+			]
+		}
+	},
+	"version": 1
+}

@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-
+import "./BaseContract.sol";
 /**
  * @title Public auction for generic assets
  * @author Fernando Malaspina
@@ -12,11 +12,8 @@ pragma solidity ^0.8.0;
  * - The auction is extended by 10 minutes with every valid new bid made in the last 10 minutes.
  *   This allows other bidders enough time to respond.
  */
-contract Auction {
-    /**
-     * @notice Owner of the contract.
-     */
-    address public immutable owner;
+contract Auction is BaseContract {
+    
 
     /**
      * @notice Start time of the auction.
@@ -40,32 +37,7 @@ contract Auction {
         address bidder;
         uint256 amount;
     }
-
-    /**
-     * @notice Current highest (winning) bid.
-     */
-    Bid winnerBid;
-
-    /**
-     * @notice Base price (e.g., 0.95 ether). A new bid must exceed this + allowed increment.
-     */
-    uint256 private basePrice;
-
-    /**
-     * @notice Required percentage increment (e.g., 5%) for a bid to be accepted.
-     */
-    uint256 public immutable allowedIncrement;
-
-    /**
-     * @notice Time extension applied if a bid is placed within the last 10 minutes.
-     */
-    uint256 public immutable extension;
-
-    /**
-     * @notice Fee percentage (e.g., 2%) deducted from bid refunds for gas compensation.
-     */
-    uint256 public immutable gasFee;
-
+    
     /**
      * @notice Structure holding bid info and any pending amount available for withdrawal.
      */
@@ -73,6 +45,28 @@ contract Auction {
         Bid bid;
         uint256 pendingWithdraw;
     }
+    /**
+     * @notice Current highest (winning) bid.
+     */
+    Bid winnerBid;
+
+    
+    /**
+     * @notice Required percentage increment (e.g., 5%) for a bid to be accepted.
+     */
+    uint256 public allowedIncrement;
+
+    /**
+     * @notice Time extension applied if a bid is placed within the last 10 minutes.
+     */
+    uint256 public extension;
+
+    /**
+     * @notice Fee percentage (e.g., 2%) deducted from bid refunds for gas compensation.
+     */
+    uint256 public gasFee;
+
+    
 
     /**
      * @notice Maps each bidder's address to their bid record.
@@ -85,19 +79,19 @@ contract Auction {
     address[] private bidders;
 
     /**
-     * @notice Lock used to prevent reentrancy during critical operations.
-     */
-    bool locked;
+    * @notice Is set to true when all balances had been refunded
+    */
+    bool isRefunded = false;
 
-    constructor() {
+    constructor(uint256 _duration, uint256 _basePrice, uint256 _allowedIncrement, uint256 _extension, uint256 _gasFee) {
         owner = msg.sender;
         startTime = block.timestamp;
-        duration = 15 minutes;
+        duration = _duration;
         endTime = startTime + duration;
-        basePrice = 0.95 ether;
-        allowedIncrement = 5;
-        extension = 10 minutes;
-        gasFee = 2;
+        winnerBid.amount = _basePrice;
+        allowedIncrement = _allowedIncrement;
+        extension = _extension;
+        gasFee = _gasFee;
     }
 
     // =====================
@@ -144,20 +138,23 @@ contract Auction {
     // ====== Modifiers =====
     // ======================
 
-    modifier nonReentrant() {
-        require(!locked, "Reentrancy detected");
-        locked = true;
+    modifier notRefunded() {
+        require(!isRefunded, "Bidders have already been refunded");
         _;
-        locked = false;
     }
 
     modifier isActive() {
-        require(block.timestamp < endTime, "Auction has expired");
+        require(block.timestamp <= endTime, "Auction has expired");
         _;
     }
 
-    modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner can perform this action");
+     modifier isFinished() {
+        require(block.timestamp > endTime, "Auction is not finished");
+        _;
+    }
+
+    modifier hasBids() {
+        require(bidders.length != 0, "There are no bids yet");
         _;
     }
 
@@ -168,7 +165,7 @@ contract Auction {
 
     modifier onlyGreaterBid() {
         require(
-            msg.value > (winnerBid.amount * (allowedIncrement + 100)) / 100,
+            msg.value >= (winnerBid.amount * (allowedIncrement + 100)) / 100,
             "Bid must be at least 5% greater than current highest bid"
         );
         _;
@@ -182,24 +179,30 @@ contract Auction {
      * @notice Places a new bid if it complies with the rules.
      * @dev Reverts if bid is not at least 5% higher or if sender is current highest bidder.
      */
-    function bid() external payable nonReentrant isActive onlyGreaterBid onlyOtherThanWinnerBidder {
-        emit NewBid(msg.sender, msg.value);
-
-        winnerBid.bidder = msg.sender;
-        winnerBid.amount = msg.value;
-
-        BidRecord memory _bidRecord = bids[msg.sender];
-
-        if (_bidRecord.bid.amount == 0) {
-            _bidRecord = BidRecord(Bid(msg.sender, msg.value), 0);
-            bidders.push(_bidRecord.bid.bidder);
-        } else {
-            _bidRecord.pendingWithdraw += _bidRecord.bid.amount;
-            _bidRecord.bid.amount = msg.value;
+    function bid() external payable isActive onlyGreaterBid onlyOtherThanWinnerBidder {
+      
+        if (winnerBid.bidder != address(0)) {
+            BidRecord storage prev = bids[winnerBid.bidder];
+            prev.pendingWithdraw += prev.bid.amount;
+            prev.bid.amount = 0;
         }
 
-        bids[msg.sender] = _bidRecord;
+    
+        BidRecord storage rec = bids[msg.sender];
 
+        if (rec.bid.bidder == address(0)) {          
+            bidders.push(msg.sender);                
+        } else {
+            rec.pendingWithdraw += rec.bid.amount;   
+        }
+
+        rec.bid = Bid(msg.sender, msg.value);        // set new stake
+
+    
+        winnerBid = Bid(msg.sender, msg.value);
+        emit NewBid(msg.sender, msg.value);
+
+    
         if (block.timestamp > endTime - extension) {
             endTime = block.timestamp + extension;
             emit AuctionExtended(endTime, msg.sender, msg.value);
@@ -210,12 +213,13 @@ contract Auction {
      * @notice Returns all bids in structured format.
      * @return A list of BidRecord structs containing each bidder's data.
      */
-    function getBids() external view returns (BidRecord[] memory) {
+    function getBids() hasBids external view returns (BidRecord[] memory) {
         uint256 len = bidders.length;
         BidRecord[] memory _all = new BidRecord[](len);
 
-        for (uint256 i = 0; i < len; i++) {
+        for (uint256 i = 0; i < len; ) {
             _all[i] = bids[bidders[i]];
+            unchecked{i++;}
         }
         return _all;
     }
@@ -225,7 +229,7 @@ contract Auction {
      * @return Time left in seconds.
      */
     function getTimeLeft() external view returns (uint256) {
-        if (block.timestamp >= endTime) {
+        if (block.timestamp > endTime) {
             return 0;
         }
         return endTime - block.timestamp;
@@ -235,7 +239,7 @@ contract Auction {
      * @notice Returns the current highest bid and bidder.
      * @return Struct Bid containing the highest bidder and bid amount.
      */
-    function getWinnerBid() external view returns (Bid memory) {
+    function getWinnerBid() hasBids external view isFinished returns (Bid memory) {
         return winnerBid;
     }
 
@@ -243,54 +247,62 @@ contract Auction {
      * @notice Allows bidders to partially withdraw previous bids (not the latest one).
      *         No gas fee is deducted. Can only be done during the auction.
      */
-    function partialWithraw() external isActive {
-        uint256 pendingWithraw = bids[msg.sender].pendingWithdraw;
-        require(pendingWithraw > 0, "No pending withdraw found");
+    function partialWithdraw() external isActive hasBids nonReentrant {
+        uint256 pendingWithdraw = bids[msg.sender].pendingWithdraw;
+        require(pendingWithdraw > 0, "No pending withdraw found");
 
         bids[msg.sender].pendingWithdraw = 0;
 
-        (bool success, ) = payable(msg.sender).call{value: pendingWithraw}("");
+        (bool success, ) = payable(msg.sender).call{value: pendingWithdraw}("");
         require(success, "Refund failed");
 
-        emit PartialWithdraw(msg.sender, pendingWithraw);
+        emit PartialWithdraw(msg.sender, pendingWithdraw);
     }
 
 
-    /**
-     * @notice Allows the claiming of the dev fees from the balance of the contract
-     */
-    function claimDevFees() external onlyOwner nonReentrant {
-        (bool success, ) = payable(owner).call{value: address(this).balance}("");
-        require(success, "Claim failed");
-    }
+    
     /**
      * @notice Allows the owner to refund all bidders at the end of the auction.
      *         The winner receives only their pendingWithdraw amount - 2%.
      *         Others receive their pendingWithdraw + (bid - 2% fee).
      */
-    function refundAll() external onlyOwner nonReentrant {
-        for (uint256 i = 0; i < bidders.length; i++) {
-            address bidderAddr = bidders[i];
-            BidRecord storage record = bids[bidderAddr];
+    function refundAll() external onlyOwner isFinished notRefunded hasBids nonReentrant {
 
-            uint256 refundAmount;
+            uint256 len = bidders.length;          
+            for (uint256 i; i < len; ) {           
+                address bidder = bidders[i];       
+                BidRecord storage rec = bids[bidder];
+                uint256 refund = 0;
+                if (rec.pendingWithdraw > 0) {
+                    refund += (rec.pendingWithdraw * (100 - gasFee)) / 100;
+                    rec.pendingWithdraw = 0;
+                }
+                if (bidder != winnerBid.bidder && rec.bid.amount > 0) {
+                    refund += (rec.bid.amount * (100 - gasFee)) / 100;
+                    rec.bid.amount = 0;
+                }
+                
 
-            uint256 pendingWithrawNet = (record.pendingWithdraw * (100 - gasFee)) / 100;
-            if (bidderAddr != winnerBid.bidder) {
-                uint256 bidNet = (record.bid.amount * (100 - gasFee)) / 100;
-                refundAmount = pendingWithrawNet + bidNet;
-                record.bid.amount = 0;
+                if (refund > 0) {
+                    (bool ok, ) = payable(bidder).call{value: refund}("");
+                    require(ok, "refund fail");
+                    emit Refund(bidder, refund);
+                }
+
+                unchecked { ++i; }       
             }
-            record.pendingWithdraw = 0;
-            
-            
-            if (refundAmount > 0) {
-                (bool success, ) = payable(bidderAddr).call{value: refundAmount}("");
-                require(success, "Refund failed");
-                emit Refund(bidderAddr, refundAmount);
-            }
-        }
-
-        emit AuctionFinished(winnerBid.bidder, winnerBid.amount);
+            isRefunded = true;
+            emit AuctionFinished(winnerBid.bidder, winnerBid.amount);
+        
     }
+    /**
+    * @dev Function to withdraw balance remaining in the contract
+    */
+    function withdrawBalance() external isFinished onlyOwner nonReentrant {
+        require(isRefunded, "Refund first");
+        (bool ok, ) = payable(owner).call{value: address(this).balance}("");
+        require(ok, "Withdraw fail");
+
+    } 
+
 }
