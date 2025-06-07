@@ -8,7 +8,7 @@ import "./BaseContract.sol";
  * @dev Auction rules:
  * - Bids must be at least 5% higher than the current highest bid.
  * - The base price for the auction is 1 ether.
- * - Auction duration is initially set to 1 hour.
+ * - Auction duration is initially set to 7 days.
  * - The auction is extended by 10 minutes with every valid new bid made in the last 10 minutes.
  *   This allows other bidders enough time to respond.
  */

@@ -334,7 +334,7 @@
 		],
 		"devdoc": {
 			"author": "Fernando Malaspina",
-			"details": "Auction rules: - Bids must be at least 5% higher than the current highest bid. - The base price for the auction is 1 ether. - Auction duration is initially set to 1 hour. - The auction is extended by 10 minutes with every valid new bid made in the last 10 minutes.   This allows other bidders enough time to respond.",
+			"details": "Auction rules: - Bids must be at least 5% higher than the current highest bid. - The base price for the auction is 1 ether. - Auction duration is initially set to 7 days. - The auction is extended by 10 minutes with every valid new bid made in the last 10 minutes.   This allows other bidders enough time to respond.",
 			"events": {
 				"AuctionExtended(uint256,address,uint256)": {
 					"params": {
@@ -476,11 +476,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0xcd52be2099b77f29444a7144d60221117a97490fcad7f07aeb303e72f7e774d3",
+			"keccak256": "0x59be95c863bb58a38c9aa3b62bbef21031f5b2ec6288077e0857560f7aa5d4e6",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://bf0ebd278e20cf49aabc560d983ca0667ec81b14945f5a36031c24bbb1d77ecc",
-				"dweb:/ipfs/QmcA7z3PvwzbcA1XwH5y6DVpYysxsvdBKWae25XovxbVCv"
+				"bzz-raw://8675055d8d538d1de5066943b9385e7dfe4391e70582dd0bbdf950035f2345b8",
+				"dweb:/ipfs/QmYr9rP3d6FrGLtcWfrq8PgJwP3qH7mWamr5LBHr9oGH4D"
 			]
 		},
 		"BaseContract.sol": {
