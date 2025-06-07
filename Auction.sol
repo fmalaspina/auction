@@ -204,7 +204,7 @@ contract Auction is BaseContract {
 
     
         if (block.timestamp > endTime - extension) {
-            endTime = block.timestamp + extension;
+            endTime = endTime + extension;
             emit AuctionExtended(endTime, msg.sender, msg.value);
         }
     }
@@ -213,7 +213,7 @@ contract Auction is BaseContract {
      * @notice Returns all bids in structured format.
      * @return A list of BidRecord structs containing each bidder's data.
      */
-    function getBids() hasBids external view returns (BidRecord[] memory) {
+    function getBids()  external view hasBids returns (BidRecord[] memory) {
         uint256 len = bidders.length;
         BidRecord[] memory _all = new BidRecord[](len);
 
@@ -239,7 +239,7 @@ contract Auction is BaseContract {
      * @notice Returns the current highest bid and bidder.
      * @return Struct Bid containing the highest bidder and bid amount.
      */
-    function getWinnerBid() hasBids external view isFinished returns (Bid memory) {
+    function getWinnerBid()  external view hasBids isFinished returns (Bid memory) {
         return winnerBid;
     }
 

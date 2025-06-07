@@ -41,7 +41,7 @@ This Solidity smart contract allows users to participate in a public auction.
 ### How the auction works  
 1. **Duration & timer**  
    * Starts the moment the contract is deployed (`startTime`).  
-   * Initial length: **15 minutes**.  
+   * Initial length: **7 days**.  
    * Any bid placed inside the last **10 minutes** pushes the end forward by another 10 minutes.  
 
 2. **Placing a bid** – `bid()`  
