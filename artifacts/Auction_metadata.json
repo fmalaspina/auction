@@ -326,6 +326,24 @@
 			},
 			{
 				"inputs": [],
+				"name": "winnerBid",
+				"outputs": [
+					{
+						"internalType": "address",
+						"name": "bidder",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "amount",
+						"type": "uint256"
+					}
+				],
+				"stateMutability": "view",
+				"type": "function"
+			},
+			{
+				"inputs": [],
 				"name": "withdrawBalance",
 				"outputs": [],
 				"stateMutability": "nonpayable",
@@ -373,6 +391,15 @@
 				"bid()": {
 					"details": "Reverts if bid is not at least 5% higher or if sender is current highest bidder."
 				},
+				"constructor": {
+					"params": {
+						"_allowedIncrement": "Allowed percent increment over the las bid.",
+						"_basePrice": "Auction base price.",
+						"_duration": "Auction duration.",
+						"_extension": "Auction extension when bid is placed within last 10 minutes.",
+						"_gasFee": "Price of the gas."
+					}
+				},
 				"getBids()": {
 					"returns": {
 						"_0": "A list of BidRecord structs containing each bidder's data."
@@ -385,11 +412,16 @@
 				},
 				"getWinnerBid()": {
 					"returns": {
-						"_0": "Struct Bid containing the highest bidder and bid amount."
+						"_0": "Bid containing the highest bidder and bid amount."
 					}
+				}
+			},
+			"stateVariables": {
+				"bidders": {
+					"details": "Helper array used to iterate over bidders for refund processing."
 				},
-				"withdrawBalance()": {
-					"details": "Function to withdraw balance remaining in the contract"
+				"isRefunded": {
+					"details": "Is set to true when all balances had been refunded"
 				}
 			},
 			"title": "Public auction for generic assets",
@@ -421,6 +453,9 @@
 				"bid()": {
 					"notice": "Places a new bid if it complies with the rules."
 				},
+				"constructor": {
+					"notice": "Constructor of the Auction contract."
+				},
 				"duration()": {
 					"notice": "Total duration of the auction."
 				},
@@ -449,10 +484,16 @@
 					"notice": "Allows bidders to partially withdraw previous bids (not the latest one).         No gas fee is deducted. Can only be done during the auction."
 				},
 				"refundAll()": {
-					"notice": "Allows the owner to refund all bidders at the end of the auction.         The winner receives only their pendingWithdraw amount - 2%.         Others receive their pendingWithdraw + (bid - 2% fee)."
+					"notice": "Allows the owner to refund all bidders at the end of the auction.         The winner receives only their pendingWithdraw amount - 2%.         Others receive their pendingWithdraw + (bid - 2% fee).         Only owner is allowed to run the function."
 				},
 				"startTime()": {
 					"notice": "Start time of the auction."
+				},
+				"winnerBid()": {
+					"notice": "Current highest (winning) bid."
+				},
+				"withdrawBalance()": {
+					"notice": "Function to withdraw balance remaining in the contract. Only owner allowed."
 				}
 			},
 			"notice": "This contract allows users to participate in an auction.",
@@ -476,11 +517,11 @@
 	},
 	"sources": {
 		"Auction.sol": {
-			"keccak256": "0x59be95c863bb58a38c9aa3b62bbef21031f5b2ec6288077e0857560f7aa5d4e6",
+			"keccak256": "0x3f227c396ebffa4fe142157a1fc28a0e0a75f0d87fead2bbc3b96b6e052f4922",
 			"license": "MIT",
 			"urls": [
-				"bzz-raw://8675055d8d538d1de5066943b9385e7dfe4391e70582dd0bbdf950035f2345b8",
-				"dweb:/ipfs/QmYr9rP3d6FrGLtcWfrq8PgJwP3qH7mWamr5LBHr9oGH4D"
+				"bzz-raw://aa27279bf71dcacb6ecc285236c0f7e65526b8f75d82af370ca4f92c63df7322",
+				"dweb:/ipfs/QmakP9vATxZCzYZc4cURmehhbsUGdmdU2eEfgAsdkifRtm"
 			]
 		},
 		"BaseContract.sol": {

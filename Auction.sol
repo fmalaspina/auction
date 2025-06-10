@@ -29,6 +29,21 @@ contract Auction is BaseContract {
      * @notice Total duration of the auction.
      */
     uint256 public immutable duration;
+    
+    /**
+     * @notice Required percentage increment (e.g., 5%) for a bid to be accepted.
+     */
+    uint256 public immutable allowedIncrement;
+
+    /**
+     * @notice Time extension applied if a bid is placed within the last 10 minutes.
+     */
+    uint256 public immutable extension;
+    
+    /**
+     * @notice Fee percentage (e.g., 2%) deducted from bid refunds for gas compensation.
+     */
+    uint256 public immutable gasFee;
 
     /**
      * @notice Structure representing a bid: bidder address and bid amount.
@@ -39,33 +54,17 @@ contract Auction is BaseContract {
     }
     
     /**
+     * @notice Current highest (winning) bid.
+     */
+    Bid public winnerBid;
+    
+    /**
      * @notice Structure holding bid info and any pending amount available for withdrawal.
      */
     struct BidRecord {
         Bid bid;
         uint256 pendingWithdraw;
     }
-    /**
-     * @notice Current highest (winning) bid.
-     */
-    Bid winnerBid;
-
-    
-    /**
-     * @notice Required percentage increment (e.g., 5%) for a bid to be accepted.
-     */
-    uint256 public allowedIncrement;
-
-    /**
-     * @notice Time extension applied if a bid is placed within the last 10 minutes.
-     */
-    uint256 public extension;
-
-    /**
-     * @notice Fee percentage (e.g., 2%) deducted from bid refunds for gas compensation.
-     */
-    uint256 public gasFee;
-
     
 
     /**
@@ -74,17 +73,24 @@ contract Auction is BaseContract {
     mapping(address => BidRecord) private bids;
 
     /**
-     * @notice Helper array used to iterate over bidders for refund processing.
+     * @dev Helper array used to iterate over bidders for refund processing.
      */
     address[] private bidders;
 
     /**
-    * @notice Is set to true when all balances had been refunded
+    * @dev Is set to true when all balances had been refunded
     */
-    bool isRefunded = false;
+    bool private isRefunded = false;
 
+    /**
+    * @notice Constructor of the Auction contract.
+    * @param _duration Auction duration.
+    * @param _basePrice Auction base price.
+    * @param _allowedIncrement Allowed percent increment over the las bid.
+    * @param _extension Auction extension when bid is placed within last 10 minutes.
+    * @param _gasFee Price of the gas.
+    */
     constructor(uint256 _duration, uint256 _basePrice, uint256 _allowedIncrement, uint256 _extension, uint256 _gasFee) {
-        owner = msg.sender;
         startTime = block.timestamp;
         duration = _duration;
         endTime = startTime + duration;
@@ -138,31 +144,49 @@ contract Auction is BaseContract {
     // ====== Modifiers =====
     // ======================
 
+    /**
+    * @dev Reverts if bidders have been already refunded.
+    */
     modifier notRefunded() {
         require(!isRefunded, "Bidders have already been refunded");
         _;
     }
 
+    /**
+    * @dev Reverts if auction has expired.
+    */
     modifier isActive() {
         require(block.timestamp <= endTime, "Auction has expired");
         _;
     }
-
+    /**
+    * @notice Reverts if the auction is not finished.
+    */
      modifier isFinished() {
         require(block.timestamp > endTime, "Auction is not finished");
         _;
     }
 
+    /**
+    * @dev Reverts if the auction has no bids.
+    */
     modifier hasBids() {
         require(bidders.length != 0, "There are no bids yet");
         _;
     }
 
+    /**
+    * @dev Reverts if the sender is the winner bidder.
+    */
     modifier onlyOtherThanWinnerBidder() {
         require(msg.sender != winnerBid.bidder, "You already have the highest bid");
         _;
     }
 
+    /**
+    * @dev Reverts if bidded amount is not greater or equal
+    *         to the winner bid plus 5%.
+    */
     modifier onlyGreaterBid() {
         require(
             msg.value >= (winnerBid.amount * (allowedIncrement + 100)) / 100,
@@ -180,7 +204,6 @@ contract Auction is BaseContract {
      * @dev Reverts if bid is not at least 5% higher or if sender is current highest bidder.
      */
     function bid() external payable isActive onlyGreaterBid onlyOtherThanWinnerBidder {
-      
         if (winnerBid.bidder != address(0)) {
             BidRecord storage prev = bids[winnerBid.bidder];
             prev.pendingWithdraw += prev.bid.amount;
@@ -189,7 +212,7 @@ contract Auction is BaseContract {
 
     
         BidRecord storage rec = bids[msg.sender];
-
+        
         if (rec.bid.bidder == address(0)) {          
             bidders.push(msg.sender);                
         } else {
@@ -237,7 +260,7 @@ contract Auction is BaseContract {
 
     /**
      * @notice Returns the current highest bid and bidder.
-     * @return Struct Bid containing the highest bidder and bid amount.
+     * @return Bid containing the highest bidder and bid amount.
      */
     function getWinnerBid()  external view hasBids isFinished returns (Bid memory) {
         return winnerBid;
@@ -265,6 +288,7 @@ contract Auction is BaseContract {
      * @notice Allows the owner to refund all bidders at the end of the auction.
      *         The winner receives only their pendingWithdraw amount - 2%.
      *         Others receive their pendingWithdraw + (bid - 2% fee).
+     *         Only owner is allowed to run the function.
      */
     function refundAll() external onlyOwner isFinished notRefunded hasBids nonReentrant {
 
@@ -296,7 +320,7 @@ contract Auction is BaseContract {
         
     }
     /**
-    * @dev Function to withdraw balance remaining in the contract
+    * @notice Function to withdraw balance remaining in the contract. Only owner allowed.
     */
     function withdrawBalance() external isFinished onlyOwner nonReentrant {
         require(isRefunded, "Refund first");
