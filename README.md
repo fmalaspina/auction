@@ -69,11 +69,3 @@ This Solidity smart contract allows users to participate in a public auction.
 > **Important:**  
 > *Always* call `partialWithdraw()` to reclaim your earlier bids if you have been out-bid and want your ETH back **before** the auction ends. After the auction, your refund is handled automatically by the owner.
 
->**NOTES:**
-
-On the deployed version documentation has an error on line 11:
-
-"- Auction duration is initially set to 1 hour."
-
-I should reflect the actual duration of the deployed contract wich is 7 days.
-

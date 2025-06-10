@@ -5,10 +5,19 @@ pragma solidity ^0.8.0;
 * Base contract with utilities to be inherited
 */
 abstract contract BaseContract {
+
+    /**
+    * @dev State variable that indicates that the function has not been entered.
+    */
     uint256 private constant _NOT_ENTERED = 1;
+    /**
+    * @dev State variable that indicates that the function has been entered.
+    */
     uint256 private constant _ENTERED     = 2;
 
-    // 1 = unlocked · 2 = locked
+    /**
+    * @dev Status of the function lock: 1 = unlocked · 2 = locked
+    */
     uint256 private _status;
 
     /**
@@ -22,7 +31,7 @@ abstract contract BaseContract {
     }
 
     /**
-    * Only allow owner to perform an action
+    * @dev Only allow owner to perform an action
     */
     modifier onlyOwner() {
         require(msg.sender == owner, "Only owner can perform this action");
